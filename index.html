@@ -94,12 +94,14 @@ function setup() {
   });
 
   heroes.forEach(hero => {
-    heroes.alliances.forEach(alliance => {
-      heroesByAlliances[alliance] = heroesByAlliance[alliance] || [];
+    console.log('hero', hero);
+    hero.alliances.forEach(alliance => {
+      heroesByAlliances[alliance] = heroesByAlliances[alliance] || [];
       heroesByAlliances[alliance].push(hero.name);
     });
   });
 
+  console.log('by alliances', heroesByAlliances);
   alliances = Object.keys(heroesByAlliances);
   alliances.sort();
 
@@ -118,7 +120,40 @@ function printHeroes() {
 }
 
 function printAlliances() {
-  printToScreen(alliances.join('<br/>'));
+  const printed = alliances.map(alliance => {
+    return `${alliance}: ${heroesByAlliances[alliance].join(', ')}`;
+  });
+  printToScreen(printed.join('<br/><br/>'));
+}
+
+const allianceLimits = {
+  assassin: [3,6,9],
+  ['blood-bound']: [2],
+  brawny: [2,4],
+  deadeye: [2],
+  demon: [1],
+  ['demon hunter']: [1,2],
+  dragon: [3],
+  druid: [2,4],
+  elusive: [3,6,9],
+  heartless: [2,4,6],
+  human: [2,4,6],
+  hunter: [3,6],
+  inventor: [2,4],
+  knight: [2,4,6],
+  mage: [3,6],
+  primordial: [2,4],
+  savage: [2,4,6],
+  scaled: [2,4],
+  scrappy: [3,6],
+  shaman: [2],
+  troll: [2,4],
+  warlock: [2,4,6],
+  warrior: [3,6,9],
+};
+
+function alliancesCount(selectedHeroes) {
+
 }
 
 setup();
