@@ -80,11 +80,11 @@ lich,5,heartless,mage
 techies,5,scrappy,inventor
 tidehunter,5,scaled,hunter`;
 
-const heroes = [];
+let heroes = [];
 const heroesByAlliances = {};
 const alliances = [];
 
-function parseTxt() {
+function setup() {
   const lines = txt.split('\n').filter(s => s).map(s => s.split(','));
   heroes = lines.map(line => {
     const name = line[0];
@@ -101,6 +101,8 @@ function printHeroes() {
   const heroNames = heroes.map(hero => hero.name).join('\n');
   printToScreen(heroNames);
 }
+
+setup();
     </script>
   </body>
 </html>
