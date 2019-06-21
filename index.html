@@ -4,21 +4,20 @@
     <title>Call Simulation</title>
   </head>
   <body>
+    <div style="height:50px;width:100px;"></div>
     <div>
         <textarea rows="10" cols="60" id="current"></textarea>
     </div>
     <div>
-    <input type="button" onclick="calculate();" value="Calculate!" />
+        <textarea rows="5" cols="60" id="options"></textarea>
+    </div>
+    <div>
+    <input type="button" onclick="calculateScore();" value="Calculate!" />
     <input type="button" onclick="printHeroes();" value="Check Heroes" />
     <input type="button" onclick="printAlliances();" value="Check Alliances" />
     </div>
     <p id="text" />
     <script type="text/javascript">
-        function calculate() {
-            const s = document.getElementById("current");
-            document.getElementById("text").innerHTML = "Hey" + s.value;
-        }
-
 const txt = `
 anti-mage,1,elusive,demon hunter
 axe,1,brawny,warrior
@@ -153,7 +152,57 @@ const allianceLimits = {
 };
 
 function alliancesCount(selectedHeroes) {
+  const counts = {};
+  selectedHeroes.forEach(hero => {
+    hero.alliances.forEach(alliance => {
+      counts[alliance] = counts[alliance] || 0;
+      counts[alliance]++;
+    });
+  });
 
+  return counts;
+}
+
+function currentScores(selectedHeroes) {
+  const counts = alliancesCount(selectedHeroes);
+  return alliances.map(alliance => {
+    const count = counts[alliance] || 0;
+    const limitPassed = allianceLimits[alliance].filter(x => x <= count);
+
+    return {
+      alliance, count,
+      score: limitPassed.length > 0 ? limitPassed[limitPassed.length-1] : 0,
+    };
+  });
+}
+
+function getHeroes(names) {
+  return names.map(name => heroes.find(hero => hero.name.toLowerCase() === name.toLowerCase()));
+}
+
+function getText(name) {
+  return document.getElementById(name).value;
+}
+
+function getCurrentNames() {
+  return getText('current').split('\n').map(s => s.trim()).filter(s => s);
+}
+
+function sortScore(firstScore, secondScore) {
+  if (firstScore.score !== secondScore.score) return secondScore.score - firstScore.score;
+  if (firstScore.count !== secondScore.count) return secondScore.count !== firstScore.count;
+  return firstScore.alliance < secondScore.alliance ? -1 : 1;
+}
+
+function printScore(scores) {
+  printToScreen(scores.filter(score => score.score > 0).sort(sortScore).map(score => `${score.alliance} ${score.score} ${score.count}`).join('<br/>'));
+}
+
+function calculateScore() {
+  const names = getCurrentNames();
+  const selectedHeroes = getHeroes(names);
+  const scores = currentScores(selectedHeroes);
+  printScore(scores);
 }
 
 setup();
