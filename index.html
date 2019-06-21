@@ -8,6 +8,14 @@
     <h1 class="site__title">
       <span class="site__title-text">Hell o!</span>
     </h1>
-    <script src="./out/main.js"></script>
+    <textarea rows="10" cols="60" id="current" />
+    <button onClick="calculate();">Calculate</button>
+    <p id="text" />
+    <script type="text/javascript">
+        function calculate() {
+            const s = document.getElementById("current");
+            document.getElementById("text").innerHtml = "Hey" + s.value;
+        }
+    </script>
   </body>
 </html>
