@@ -10,6 +10,7 @@
     <div>
     <input type="button" onclick="calculate();" value="Calculate!" />
     <input type="button" onclick="printHeroes();" value="Check Heroes" />
+    <input type="button" onclick="printAlliances();" value="Check Alliances" />
     </div>
     <p id="text" />
     <script type="text/javascript">
@@ -81,8 +82,8 @@ techies,5,scrappy,inventor
 tidehunter,5,scaled,hunter`;
 
 let heroes = [];
-const heroesByAlliances = {};
-const alliances = [];
+let heroesByAlliances = {};
+let alliances = [];
 
 function setup() {
   const lines = txt.split('\n').filter(s => s).map(s => s.split(','));
@@ -90,6 +91,20 @@ function setup() {
     const name = line[0];
     const alliances = line.slice(2);
     return { name, alliances, baseLevel: parseInt(line[1], 10) };
+  });
+
+  heroes.forEach(hero => {
+    heroes.alliances.forEach(alliance => {
+      heroesByAlliances[alliance] = heroesByAlliance[alliance] || [];
+      heroesByAlliances[alliance].push(hero.name);
+    });
+  });
+
+  alliances = Object.keys(heroesByAlliances);
+  alliances.sort();
+
+  alliances.forEach(alliance => {
+    heroesByAlliances[alliance].sort();
   });
 }
 
@@ -100,6 +115,10 @@ function printToScreen(s) {
 function printHeroes() {
   const heroNames = heroes.map(hero => hero.name).join('\n');
   printToScreen(heroNames);
+}
+
+function printAlliances() {
+  printToScreen(alliances.join('<br/>'));
 }
 
 setup();
