@@ -4,16 +4,103 @@
     <title>Call Simulation</title>
   </head>
   <body>
-    <textarea rows="10" cols="60" id="current"></textarea>
+    <div>
+        <textarea rows="10" cols="60" id="current"></textarea>
+    </div>
+    <div>
     <input type="button" onclick="calculate();" value="Calculate!" />
+    <input type="button" onclick="printHeroes();" value="Check Heroes" />
+    </div>
     <p id="text" />
     <script type="text/javascript">
         function calculate() {
             const s = document.getElementById("current");
-alert("hmm ");
-alert(s.value);
             document.getElementById("text").innerHTML = "Hey" + s.value;
         }
+
+const txt = `
+anti-mage,1,elusive,demon hunter
+axe,1,brawny,warrior
+batrider,1,troll,knight
+bloodseeker,1,human,assassin
+bounty hunter,1,scrappy,assassin
+clockwerk,1,scrappy,inventor
+drow ranger,1,heartless,hunter
+enchantress,1,savage,druid
+ogre magi,1,blood-bound,mage
+shadow shaman,1,troll,shaman
+tinker,1,scrappy,inventor
+tiny,1,primordial,warrior
+tusk,1,savage,warrior
+warlock,1,blood-bound,warlock
+beastmaster,2,brawny,hunter
+chaos knight,2,demon,knight
+crystal maiden,2,human,mage
+juggernaut,2,brawny,warrior
+luna,2,elusive,knight
+morphling,2,primordial,assassin
+nature's prophet,2,elusive,druid
+puck,2,elusive,dragon,mage
+pudge,2,heartless,warrior
+queen of pain,2,demon,assassin
+slardar,2,scaled,warrior
+timbersaw,2,scrappy,inventor
+treant protector,2,elusive,druid
+witch doctor,2,troll,warlock
+abaddon,3,heartless,knight
+arc warden,3,primordial,shaman
+lina,3,human,mage
+lycan,3,human,savage,warrior
+omniknight,3,human,knight
+phantom assassin,3,elusive,assassin
+razor,3,primordial,mage
+sand king,3,savage,assassin
+shadow fiend,3,demon,warlock
+slark,3,scaled,assassin
+sniper,3,deadeye,hunter
+terrorblade,3,demon,demon hunter
+venomancer,3,savage,warlock
+viper,3,dragon,assassin
+windranger,3,elusive,hunter
+alchemist,4,scrappy,warlock
+disruptor,4,brawny,shaman
+doom,4,demon,warrior
+dragon knight,4,human,dragon,knight
+keeper of the light,4,human,mage
+kunkka,4,human,warrior
+lone druid,4,savage,druid
+medusa,4,scaled,hunter
+mirana,4,elusive,hunter
+necrophos,4,heartless,warlock
+templar assassin,4,elusive,assassin
+troll warlord,4,troll,warrior
+enigma,5,primordial,warlock
+gyrocopter,5,deadeye,inventor
+lich,5,heartless,mage
+techies,5,scrappy,inventor
+tidehunter,5,scaled,hunter`;
+
+const heroes = [];
+const heroesByAlliances = {};
+const alliances = [];
+
+function parseTxt() {
+  const lines = txt.split('\n').filter(s => s).map(s => s.split(','));
+  heroes = lines.map(line => {
+    const name = line[0];
+    const alliances = line.slice(2);
+    return { name, alliances, baseLevel: parseInt(line[1], 10) };
+  });
+}
+
+function printToScreen(s) {
+  document.getElementById('text').innerHTML = s;
+}
+
+function printHeroes() {
+  const heroNames = heroes.map(hero => hero.name).join('\n');
+  printToScreen(heroNames);
+}
     </script>
   </body>
 </html>
