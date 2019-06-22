@@ -4,12 +4,8 @@
     <title>Call Simulation</title>
   </head>
   <body>
-    <div style="height:50px;width:100px;"></div>
     <div>
         <textarea rows="10" cols="60" id="current"></textarea>
-    </div>
-    <div>
-        <textarea rows="5" cols="60" id="options"></textarea>
     </div>
     <div>
     <input type="button" onclick="calculateScore();" value="Calculate!" />
@@ -89,7 +85,7 @@ function setup() {
   heroes = lines.map(line => {
     const name = line[0];
     const alliances = line.slice(2);
-    return { name, alliances, baseLevel: parseInt(line[1], 10) };
+    return { name, alliances, tier: parseInt(line[1], 10) };
   });
 
   heroes.forEach(hero => {
@@ -177,7 +173,10 @@ function currentScores(selectedHeroes) {
 }
 
 function getHeroes(names) {
-  return names.map(name => heroes.find(hero => hero.name.toLowerCase() === name.toLowerCase()));
+  return names.map(s => s.split(',')).map([name, star] => {
+    const h = heroes.find(hero => hero.name.toLowerCase() === name.toLowerCase());
+    return {...h, star: star ? parseInt(star, 10) : 0};
+  });
 }
 
 function getText(name) {
@@ -203,6 +202,39 @@ function calculateScore() {
   const selectedHeroes = getHeroes(names);
   const scores = currentScores(selectedHeroes);
   printScore(scores);
+}
+
+function sortHeroByStar(first, second) {
+  if (first.star !== second.star) return second.star - first.star;
+  if (first.tier !== second.tier) return second.tier-first.tier;
+  return first.name < second.name ? -1 : 1;
+}
+
+function getRank(selectedHeroes) {
+  const stars = [...selectedHeroes];
+  stars.sort(sortHeroByStar);
+  return stars;
+}
+
+function possibleScores(selectedHeroes) {
+  const scores = const counts = alliancesCount(selectedHeroes);
+  return alliances.map(alliance => {
+    const count = counts[alliance] || 0;
+    const limitPassed = allianceLimits[alliance].filter(x => x <= count + 10 - selectedHeroes.length);
+
+    return {
+      alliance, count,
+      score: limitPassed.length > 0 ? limitPassed[limitPassed.length-1] : 0,
+    };
+  });
+}
+
+function fullScore(selectedHeroes) {
+  return {
+    heroes: getRank(selectedHeroes),
+    currentScore: currentScores(selectedHeroes),
+    potential: possibleScores(selectedHeroes),
+  };
 }
 
 setup();
