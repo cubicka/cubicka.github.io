@@ -5,6 +5,7 @@
   </head>
   <body>
     <div>
+<<<<<<< Updated upstream
         <textarea rows="10" cols="60" id="current"></textarea>
     </div>
     <div>
@@ -238,6 +239,18 @@ function fullScore(selectedHeroes) {
 }
 
 setup();
+=======
+        <textarea rows="17" cols="60" id="current" onkeyup="calculateScoreAuto();"></textarea>
+    </div>
+    <div>
+      <input type="button" onclick="calculateScore();" value="Calculate!" />
+      <input type="button" onclick="applyText();" value="Apply!" />
+      <input type="button" onclick="printHeroes();" value="Check Heroes" />
+      <input type="button" onclick="printAlliances();" value="Check Alliances" />
+    </div>
+    <p id="text"></p>
+    <script type="text/javascript" src="clean.js">
+>>>>>>> Stashed changes
     </script>
   </body>
 </html>
