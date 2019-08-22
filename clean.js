@@ -456,33 +456,9 @@ function chopSome(colls, n) {
 }
 
 function compareTeamsPotential(first, second) {
-  // const sortFns = [
-  //   (t => t.score.mattersStar.slice(0, 6)),
-  //   // (t => t.score.mattersStar),
-  //   // (t => t.score.tiers.slice(0, Math.min(GLOBAL_N + 2, t.score.stars.length))),
-  //   (t => t.score.tiers.slice(0, 6)),
-  //   (t => t.score.stars),
-  //   // (t => t.score.mattersTier.slice(0, Math.min(GLOBAL_N + 3, t.score.stars.length))),
-  //   // (t => t.score.mattersTier),
-  //   // (t => t.score.allOnPerk.reduce((a,b) => a + b, 0)),
-  //   (t => t.score.preferredAlliances),
-  //   (t => t.score.weightedAlliance),
-  //   // (t => t.score.perk),
-  //   // (t => t.score.perk.reduce((a,b) => a+b,0)),
-  //   // (t => t.score.all),
-  //   (t => t.idx * -1),
-  // ];
   const sortFns = [
-    // // (t => t.score.mattersStarSimilar),
-    // // (t => chopSome(t.score.stars, 0)),
-    // // (t => t.score.stars),
-    // (t => t.score.tiers),
-    // (t => t.score.preferredAlliances),
-    // (t => t.score.weightedAlliance),
-    // (t => t.score.mattersStar.map(x => x < 5 && x > 3 ? 3 : x)),
-    (t => t.score.starsSimilar),//.slice(0, Math.max(0, GLOBAL_N - 2))),
-    // (t => t.score.starsReal),
-    (t => t.score.weightedAlliance.slice(0,2).reduce((a,b) => a+b, 0)),
+    (t => t.score.starsSimilar),
+    (t => t.score.weightedAlliance.slice(0,Math.ceil(GLOBAL_N / 3)).reduce((a,b) => a+b, 0)),
     (t => t.score.mattersTier),
     (t => t.score.preferredAlliances),
     (t => t.score.weightedAlliance.reduce((a,b) => a+b, 0)),
@@ -490,44 +466,21 @@ function compareTeamsPotential(first, second) {
     (t => t.idx * -1),
   ];
 
-  const minSort = sortFns;
-  // const minSort = [
-  //   (t => t.score.stars),
-  //   (t => t.score.tiers),
-  //   (t => t.idx * -1),
-  // ]
-
-  return first.heroes.length > 3 ? compareWithArrFns(first, second, sortFns) : compareWithArrFns(first, second, minSort);
+  return compareWithArrFns(first, second, sortFns);
 }
 
 function compareTeams(first, second) {
   const sortFns = [
     (t => t.score.starsReal.slice(0, Math.max(0, GLOBAL_N - Math.floor(GLOBAL_N / 3)))),
-    // (t => t.score.starsSimilar),
-    // (t => t.score.mattersStarReal.map(s => toStar(s))),
-    // (t => t.score.allOnPerk.reduce((a,b) => a + b, 0)),
-
-    (t => t.score.weightedAlliance.slice(0,2).reduce((a,b) => a+b, 0)),
+    (t => t.score.weightedAlliance.slice(0,Math.ceil(GLOBAL_N / 3)).reduce((a,b) => a+b, 0)),
     (t => t.score.mattersTier),
     (t => t.score.preferredAlliances),
     (t => t.score.weightedAlliance.reduce((a,b) => a+b, 0)),
-    // (t => t.score.perk),
-    // (t => t.score.perk.reduce((a,b) => a+b,0)),
-    // (t => t.score.all),
-
     (t => t.score.tiers),
-    (t => t.score.starsReal),
     (t => t.idx * -1),
   ];
 
-  const minSort = sortFns;
-  // const minSort = [
-  //   (t => t.score.stars),
-  //   (t => t.score.tiers),
-  //   (t => t.idx * -1),
-  // ]
-
-  return first.heroes.length > 3 ? compareWithArrFns(first, second, sortFns) : compareWithArrFns(first, second, minSort);
+  return compareWithArrFns(first, second, sortFns);
 }
 
 function prepareTeam(heroes, idx) {
@@ -537,18 +490,10 @@ function prepareTeam(heroes, idx) {
   }
 }
 
-function prepareTeamScore(rawHeroes) {
-  const heroes = globalPotentialNames.length > 0 ? rawHeroes.filter(h => globalPotentialNames.indexOf(h.name) !== -1) : rawHeroes;
-  const uniqueHeroes = heroes.reduce((accum, h) => {
-    const idx = accum.findIndex(a => a.name === h.name);
-    if (idx === -1) return accum.concat([{...h}]);
-    accum[idx].star = Math.max(accum[idx].star, h.star);
-    return accum;
-  }, []);
-
+function prepareTeamScore(heroes) {
   alliances.forEach(a => {
     globalAllCount[a].n = 0;
-    globalAllCount[a].t = true;
+    globalAllCount[a].t = false;
     globalAllCount[a].h = {};
   });
 
@@ -561,7 +506,17 @@ function prepareTeamScore(rawHeroes) {
     globalStarCount[hero.name] += hero.star;
   })
 
+  const reallyUniqueHeroes = heroes.reduce((accum, h) => {
+    const idx = accum.findIndex(a => a.name === h.name);
+    if (idx === -1) return accum.concat([{...h}]);
+    accum[idx].star = globalStarCount[h.name];
+    return accum;
+  }, []);
+
+  const uniqueHeroes = globalPotentialNames.length > 0 ? reallyUniqueHeroes : heroes;
+
   alliances.forEach(a => {
+    // globalAllCount[a].n = uniqueHeroes.filter(h => h.alliances.some(b => b === a)).length;
     globalAllCount[a].n = Object.keys(globalAllCount[a].h).length;
     globalAllCount[a].t = globalAllCount[a].n >= allianceLimits[a][0];
   })
@@ -570,59 +525,73 @@ function prepareTeamScore(rawHeroes) {
     globalAllCount['demon'].n = 0; globalAllCount['demon'].t = false;
   }
 
-  const recap = heroes.map(hero => {
-    // if (selectedHeroes.length <= 3) return [hero.tier, hero.star];
-    // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, toStar(hero.star)] : [0, 0];
-    // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, hero.star] : [0, 0];
-    return hero.alliances.some(all => globalAllCount[all].t) ? globalStarCount[hero.name] : 0;
-  });
-  recap.sort(); recap.reverse();
+//   const matterStar = heroes.map(hero => {
+//     // if (selectedHeroes.length <= 3) return [hero.tier, hero.star];
+//     // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, toStar(hero.star)] : [0, 0];
+//     // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, hero.star] : [0, 0];
+//     return hero.alliances.some(all => globalAllCount[all].t) ? globalStarCount[hero.name] : 0;
+//   });
+//   matterStar.sort(); matterStar.reverse();
 
-  const mattersStarReal = heroes.map(hero => {
-    // if (selectedHeroes.length <= 3) return [hero.tier, hero.star];
-    // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, toStar(hero.star)] : [0, 0];
-    // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, hero.star] : [0, 0];
-    return hero.alliances.some(all => globalAllCount[all].t) ? hero.star : 0;
-  });
-  mattersStarReal.sort(); mattersStarReal.reverse();
+//   const mattersStarReal = heroes.map(hero => {
+//     // if (selectedHeroes.length <= 3) return [hero.tier, hero.star];
+//     // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, toStar(hero.star)] : [0, 0];
+//     // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, hero.star] : [0, 0];
+//     return hero.alliances.some(all => globalAllCount[all].t) ? hero.star : 0;
+//   });
+//   mattersStarReal.sort(); mattersStarReal.reverse();
 
-  const mattersStarSimilar = heroes.map(hero => {
-    if (hero.alliances.every(all => !globalAllCount[all].t)) return 0;
-    const similar = heroes.filter(a => a.name === hero.name && a.star === hero.star);
-    return similar.length * hero.star;
-  });
-  mattersStarSimilar.sort(); mattersStarSimilar.reverse();
+//   const mattersStarSimilar = heroes.map(hero => {
+//     if (hero.alliances.every(all => !globalAllCount[all].t)) return 0;
+//     const similar = heroes.filter(a => a.name === hero.name && a.star === hero.star);
+//     return similar.length * hero.star;
+//   });
+//   mattersStarSimilar.sort(); mattersStarSimilar.reverse();
 
-  const mattersTier = uniqueHeroes.map(hero => {
-    // if (selectedHeroes.length <= 3) return [hero.tier, hero.star];
-    // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, toStar(hero.star)] : [0, 0];
-    // return hero.alliances.some(all => allianceMatter.indexOf(all) !== -1) ? [hero.tier, hero.star] : [0, 0];
+  const mattersTier = reallyUniqueHeroes.map(hero => {
     return hero.alliances.some(all => globalAllCount[all].t) ? hero.tier : 0;
   });
   mattersTier.sort(); mattersTier.reverse();
 
-  const stars = heroes.map(h => {
-    const similar = heroes.filter(a => a.name === h.name && a.star === h.star);
-    return similar.length * h.star;
-  });
+//   const stars = heroes.map(h => {
+//     const similar = heroes.filter(a => a.name === h.name && a.star === h.star);
+//     return similar.length * h.star;
+//   });
   
-  stars.sort(); stars.reverse();
+//   stars.sort(); stars.reverse();
 
-  // const starsSimilar = heroes.map(h => {
-  //   // if (globalPotentialNames.length > 0 && globalPotentialNames.indexOf(h.name) === -1) return 1;
-  //   if (globalStarCount[h.name] === 4 || globalStarCount[h.name] === 5) return h.star === 1 ? globalStarCount[h.name] - 3 : 3;
-  //   return globalStarCount[h.name];
-  // });
-  const starsSimilar = uniqueHeroes.reduce((accum, h) => {
-    // if (globalPotentialNames.length > 0 && globalPotentialNames.indexOf(h.name) === -1) return 1;
-    if (globalStarCount[h.name] <= 3) return accum.concat([globalStarCount[h.name]]);
-    if (globalStarCount[h.name] === 9) return accum.concat([9]);
-    if (globalStarCount[h.name] === 6) return accum.concat([6, 6]);
-    if (globalStarCount[h.name] < 6) return accum.concat([3, globalStarCount[h.name] - 3]);
-    // if (globalStarCount[h.name] < 6) return accum.concat([globalStarCount[h.name], globalStarCount[h.name]]);
-    return accum.concat([globalStarCount[h.name], globalStarCount[h.name], globalStarCount[h.name]]);
-  }, []);
-  
+  const tempStarsSimilar = reallyUniqueHeroes.map((h) => {
+//   const starsSimilar = reallyUniqueHeroes.reduce((accum, h) => {
+//     if (globalStarCount[h.name] <= 3) return accum.concat([globalStarCount[h.name]]);
+//     if (globalStarCount[h.name] === 9) return accum.concat([9]);
+//     if (globalStarCount[h.name] === 6) return accum.concat([6, 6]);
+//     if (globalStarCount[h.name] < 6) return accum.concat([3, globalStarCount[h.name] - 3]);
+//     // if (globalStarCount[h.name] < 6) return accum.concat([globalStarCount[h.name], globalStarCount[h.name]]);
+//     return accum.concat([globalStarCount[h.name], globalStarCount[h.name], globalStarCount[h.name]]);
+    return globalStarCount[h.name];
+//   }, []);
+  });
+  tempStarsSimilar.sort(); tempStarsSimilar.reverse();
+  const starsSimilar = tempStarsSimilar.reduce((accum, x) => {
+      if (x === 9 || x === 6 || x === 3) {
+          accum.results.push(x);
+      } else if (x > 3) {
+          if (accum.a < 2) {
+              accum.a += 1;
+              accum.results.push(x);
+          } else {
+              accum.results.push(3);
+          }
+      } else {
+          if (x === 2 && accum.b + accum.a < 3) {
+              accum.b += 1;
+              accum.results.push(x);
+          } else {
+              accum.results.push(1);
+          }
+      }
+      return accum;
+  }, {results: [], a: 0, b: 0}).results;
   starsSimilar.sort(); starsSimilar.reverse();
 
   const starsReal = heroes.map(h => h.star);
@@ -633,22 +602,27 @@ function prepareTeamScore(rawHeroes) {
 
   const weightedAlliance = alliances.map(a => {
     const limitPassed = allianceLimits[a].filter(x => x <= globalAllCount[a].n);
-    return limitPassed.length * globalAllCount[a].n;
-  })
-
+    return limitPassed.length * uniqueHeroes.filter(h => h.alliances.some(b => a === b)).length; // globalAllCount[a].n;
+  });
   weightedAlliance.sort(); weightedAlliance.reverse();
 
+  const preferredAlliances = alliances.filter(a => GLOBAL_PREFERRED_ALLIANCES.some(b => a === b)).map(a => {
+    const limitPassed = allianceLimits[a].filter(x => x <= globalAllCount[a].n);
+    return limitPassed.length * uniqueHeroes.filter(h => h.alliances.some(b => a === b)).length; // globalAllCount[a].n;
+  });
+  preferredAlliances.sort(); preferredAlliances.reverse();
+
   return {
-    stars,
+    // stars,
     starsSimilar,
     starsReal,
-    mattersStarReal,
+    // mattersStarReal,
     tiers,
     // weightedAlliance,
     weightedAlliance: weightedAlliance,//.reduce((a,b) => a+b,0),
-    preferredAlliances: preferredAllianceCount(heroes).reduce((a,b) => a + b, 0),
-    mattersStar: recap,
-    mattersStarSimilar,
+    preferredAlliances: preferredAlliances.reduce((a,b) => a + b, 0),
+    // mattersStar: recap,
+    // mattersStarSimilar,
     mattersTier,
     alliances: alliances.filter(all => globalAllCount[all].t),
   };  
@@ -1020,10 +994,10 @@ function cleanUpBench(core, bench) {
     const copy = {...hero, star:1};
     // const idx = copyBench.findIndex(h => h.name === copy.name && h.star === copy.star);
     // const tempTeams = createTeams([...bench.slice(0,idx), ...bench.slice(idx+1), copy, copy], bench.length).map(t => [...core, ...t]).map(prepareTeam);
-    const tempTeams = createTeams(bench.concat([copy]), bench.length).map(t => [...core, ...t]).map(prepareTeam);
+    const tempTeams = createTeams(bench.concat([copy]), 8).map(t => [...core, ...t]).map(prepareTeam);
     tempTeams.sort(compareTeamsPotential);
     // tempTeams.sort((a, b) => compareWithArrFns(a, b, sortFns));
-    // console.log('---', copy, core, bench, tempTeams);
+    console.log('---', copy, core, bench, tempTeams);
     return tempTeams[0].heroes.filter(h => h.name === copy.name).reduce((x, h) => x + h.star, 0) === core.concat(bench).filter(h => h.name === copy.name).reduce((x,h) => x + h.star, 0) + 1;
   });
 }
@@ -1244,16 +1218,27 @@ function iterativeElimination(n, money, core, bench, sold, compareFn) {
     const stillPossibleIdx = Array.from(new Array(allHeroes.length)).map((_, idx) => idx).filter(x => excluded[x] === undefined);
     const candidateHeroes = stillPossibleIdx.map((x, idx) => {
       const filteredHeroes = allHeroes.filter((_, y) => x !== y && excluded[y] === undefined);
-      const mergedFilteredHeroes = mergeHeroes(core, filteredHeroes);
+      let mergedFilteredHeroes = mergeHeroes(core, filteredHeroes);
+      const whatIfMerged = mergeHeroes(mergedFilteredHeroes, [allHeroes[x]]);
+      if (whatIfMerged.length < mergedFilteredHeroes.length) {
+        const fIdx = mergedFilteredHeroes.findIndex(h => h.name === allHeroes[x].name && h.star === allHeroes[x].star);
+        const sIdx = fIdx + 1 + mergedFilteredHeroes.slice(fIdx + 1).findIndex(h => h.name === allHeroes[x].name && h.star === allHeroes[x].star);
+        mergedFilteredHeroes = [
+            ...mergedFilteredHeroes.slice(0, fIdx), 
+            ...mergedFilteredHeroes.slice(fIdx + 1, sIdx), 
+            ...mergedFilteredHeroes.slice(sIdx + 1),
+        ];
+      }
+
       return {
-        ...prepareTeam(mergedFilteredHeroes, -1*idx),
+        ...prepareTeam(mergedFilteredHeroes, -1 * x),
         x,
       }
     })
 
     const sortedCandidates = candidateHeroes.sort(compareFn);
-    // console.log('sorted', sortedCandidates[0].heroes.map(h => h.name))
     console.log('sorted', sortedCandidates)
+    console.log('sorted', allHeroes[sortedCandidates[0].idx * -1])
     const deletedX = sortedCandidates[0].x;
     excluded[deletedX] = true;
     if (deletedX < bench.length) currentMoney += priceOfHeroes([allHeroes[deletedX]]);
@@ -1268,21 +1253,74 @@ function pickCore(money, picked, bench, sold) {
 }
 
 function pickMainBench(money, core, picked, bench, sold) {
-  return iterativeElimination(GLOBAL_N + 4, money, core, [...picked, ...bench], sold, compareTeamsPotential);
+//   return iterativeElimination(GLOBAL_N + 1, money, core, [...picked, ...bench], sold, compareTeamsPotential);
+    const options = [...picked, ...bench, ...sold];
+    const weightedOptions = options.map((h,idx) => {
+        return {h, t: prepareTeam(mergeHeroes(core, options.filter(o => o.name === h.name)), idx)};
+    });
+    weightedOptions.sort((a,b) => compareTeamsPotential(a.t, b.t));
+    console.log('main bench process');
+    console.log(weightedOptions);
+
+    const firstNewOption = weightedOptions.find(w => core.every(a => a.name !== w.h.name));
+
+    let currentMoney = money + priceOfHeroes(picked) + priceOfHeroes(bench);
+    let results = [], idx = 0;
+    while(currentMoney > 0 && results.length < 8 && idx < options.length) {
+        const nextHero = weightedOptions[idx].h;
+        const nextPrice = priceOfHeroes([nextHero]);
+        if (currentMoney < nextPrice) break;
+        // console.log('nexthero', nextHero, firstNewOption.h, core)
+        if (nextHero.name !== firstNewOption.h.name && core.every(a => a.name !== nextHero.name)) break;
+
+        results.push(nextHero);
+        currentMoney -= nextPrice;
+        idx++;
+    }
+
+    return results;
 }
 
 function pickAdditionalBench(money, core, picked, bench, sold) {
-  return iterativeElimination(GLOBAL_N + 8, money, core, [...picked, ...bench], sold, compareTeamsPotential);
+//   return iterativeElimination(GLOBAL_N + 7, money, core, [...picked, ...bench], sold, compareTeamsPotential);
+    const options = [...picked, ...bench, ...sold];
+    const weightedOptions = options.map((h,idx) => {
+        return {h, t: prepareTeam(mergeHeroes(core, options.filter(o => o.name === h.name)), idx)};
+    });
+    weightedOptions.sort((a,b) => compareTeamsPotential(a.t, b.t));
+    console.log('additional bench process');
+    console.log(weightedOptions)
+
+    let currentMoney = money + priceOfHeroes(picked) + priceOfHeroes(bench);
+    let results = [], idx = 0;
+    console.log('iterate', currentMoney, results);
+    while(currentMoney > 0 && results.length < 8 && idx < options.length) {
+        const nextHero = weightedOptions[idx].h;
+        const nextPrice = priceOfHeroes([nextHero]);
+        if (currentMoney < nextPrice) break;
+
+        results.push(nextHero);
+        currentMoney -= nextPrice;
+        idx++;
+        console.log('iterate', currentMoney, [...results]);
+    }
+
+    return results;
 }
 
+// let GLOBAL_SIMILARITY = [];
 function simpleSolver(money, picked, bench, sold) {
-  const core = pickCore(money, picked, bench, sold, compareTeams);
+  globalPotentialNames = [];
+
+  const core = pickCore(money, picked, bench, sold);
   console.log('======= core =======', core);
   const fieldLimbo = substractHero(picked, core);
   const coreNotFromField = substractHero(core, picked);
   const benchLimbo = substractHero(bench, coreNotFromField);
   const coreFromSold = substractHero(coreNotFromField, bench);
   const soldLimbo = substractHero(sold, coreFromSold);
+
+  globalPotentialNames = core.map(h => h.name);
 
   const moneyAfterCore = money - priceOfHeroes(coreFromSold);
   const mainBench = pickMainBench(moneyAfterCore, core, fieldLimbo, benchLimbo, soldLimbo);
@@ -1292,25 +1330,40 @@ function simpleSolver(money, picked, bench, sold) {
   const coreFromField2 = unionHero(mainBench, fieldLimbo);
   const benchLimbo2 = substractHero(benchLimbo, coreNotFromField2);
   const coreFromBench2 = unionHero(substractHero(mainBench, coreFromField2), benchLimbo);
-  const coreFromSold2 = substractHero(coreNotFromField2, benchLimbo);
-  const soldLimbo2 = substractHero(soldLimbo, coreFromSold2);
+//   const coreFromSold2 = substractHero(coreNotFromField2, benchLimbo);
+//   const soldLimbo2 = substractHero(soldLimbo, coreFromSold2);
 
   // const moneyAfterBench = moneyAfterCore - priceOfHeroes(coreFromSold2);
-  const targetPrice = Math.max(0, Math.min(50, Math.floor((moneyAfterCore + priceOfHeroes(fieldLimbo2) + priceOfHeroes(benchLimbo2)) / 10) * 10));
+  const targetPrice = GLOBAL_MODS !== -1 ? 0 : Math.max(0, Math.min(50, Math.floor((moneyAfterCore + priceOfHeroes(fieldLimbo2) + priceOfHeroes(benchLimbo2)) / 10) * 10));
   console.log('======= targetPrice =======', targetPrice);
 
-  const benchBeforeStart = pickAdditionalBench(moneyAfterCore - targetPrice, [...core, ...coreFromField2, ...coreFromBench2], fieldLimbo2, benchLimbo2, []);
+//   GLOBAL_SIMILARITY = [...core, ...mainBench].map(h => h.name);
+//   console.log(GLOBAL_SIMILARITY)
+
+  const benchBeforeStart = [...coreFromField2, ...coreFromBench2,
+    ...pickAdditionalBench(moneyAfterCore - targetPrice, [...core, ...coreFromField2, ...coreFromBench2], fieldLimbo2, benchLimbo2, [])];
   console.log('======= benchBeforeStart =======', benchBeforeStart);
   const soldBench = substractHero([...fieldLimbo2, ...benchLimbo2], benchBeforeStart);
   const moneyBeforeStart = moneyAfterCore + priceOfHeroes(soldBench);
 
+  const soldFromField0 = substractHero(fieldLimbo, benchBeforeStart);
+  const soldFromBench0 = substractHero(benchLimbo, benchBeforeStart);
+
   // const fullBench = pickAdditionalBench(moneyBeforeStart, [...core, ...mainBench], [], benchBeforeStart, soldLimbo2);
-  const fullBench = pickAdditionalBench(moneyBeforeStart, core, [...coreFromField2, ...coreFromBench2], benchBeforeStart, soldLimbo);
+  const fullBench = pickAdditionalBench(moneyBeforeStart, core, [], benchBeforeStart, soldLimbo);
+//   GLOBAL_SIMILARITY = [];
   console.log('======= fullBench =======', fullBench);
   const cleanFullBench = cleanUpBench(core, fullBench);
 
-  const soldFromField = substractHero(fieldLimbo, cleanFullBench);
-  const fullBenchNotFromField = substractHero(cleanFullBench, fieldLimbo);
+  const fullBenchFromField = unionHero(cleanFullBench, substractHero(fieldLimbo, soldFromField0));
+  const fullBenchFromBench = unionHero(substractHero(cleanFullBench, fullBenchFromField), substractHero(benchLimbo, soldFromBench0));
+  const fullBenchFromSold = substractHero(substractHero(cleanFullBench,fullBenchFromField), fullBenchFromBench);
+  
+  const soldFromField = substractHero(fieldLimbo, fullBenchFromField);
+  const soldFromBench = substractHero(benchLimbo, fullBenchFromBench);
+
+    // const fullBenchFromSold = substractHero(cleanFullBench, benchBeforeStart);
+
   globalBestCore = core;
   console.log('result', benchBeforeStart, fullBench, cleanFullBench)
 
@@ -1324,11 +1377,11 @@ function simpleSolver(money, picked, bench, sold) {
   return {
     core: definitelyCore, bench: definitelyBench,
     soldFromField,
-    soldFromBench: substractHero(benchLimbo, fullBenchNotFromField),
+    soldFromBench,
     benchToField: substractHero(bench, benchLimbo),
     soldToField: coreFromSold,
     fieldToBench: unionHero(fieldLimbo, cleanFullBench),
-    soldToBench: substractHero(fullBenchNotFromField, benchLimbo),
+    soldToBench: fullBenchFromSold, // substractHero(fullBenchNotFromField, benchLimbo),
   };
 }
 
@@ -1353,31 +1406,17 @@ function calculateScore() {
   const lastLine = lines.slice(thirdSepIdx+1, fourthSepIdx).join('\n');
   const n = parseInt(lines[thirdSepIdx+1].split(',')[0],10);
   GLOBAL_N = n;
-  const prevN = parseInt(lines[thirdSepIdx+1].split(',')[1] || n,10);
+  GLOBAL_MODS = parseInt(lines[thirdSepIdx+1].split(',')[1] || -1, 10);
   const money = parseInt(lines[thirdSepIdx+2], 10);
   const off = (lines[thirdSepIdx+3] || '').split(',').map(s => parseInt(s, 10));
   const sup = (lines[thirdSepIdx+4] || '').split(',').map(s => parseInt(s, 10));
   const def = (lines[thirdSepIdx+5] || '').split(',').map(s => parseInt(s, 10));
 
-
   const mainHeroes = getHeroes(pickLines);
   const optHeroes = getHeroes(benchLines);
   const shopHeroes = getHeroes(shopLines);
 
-  preferredAlliances = lines.slice(fourthSepIdx+1);//.concat(reallyTempTeam[0].heroes[0].alliances);
-  // const reallyTempTeam = createTeams([...mainHeroes, ...optHeroes, ...shopHeroes], 1).map(prepareTeam);
-  // reallyTempTeam.sort(compareTeams);
-  // preferredAlliances = lines.slice(fourthSepIdx+1).concat(reallyTempTeam[0].heroes[0].alliances);
-  // console.log('prove', preferredAlliances);
-
-  // const candidates = mergeHeroes(mainHeroes, optHeroes);
-
-  // const best = n >= 4 ? pickBestWithBench(candidates, n, 1) : pickBestWithBench(candidates, n, 0);
-  // const best = pickBestWithBench(candidates, n, 2);
-  // globalBest = best;
-  // const bestHeroes = best.heroes;
-  // const bestBench = best.bench;
-  // const cleanNames = mainNames.map(hero => hero.name);
+  GLOBAL_PREFERRED_ALLIANCES = lines.slice(fourthSepIdx+1);//.concat(reallyTempTeam[0].heroes[0].alliances);
 
   const solveResults = simpleSolver(money, mainHeroes, optHeroes, shopHeroes);
   console.log('solveResults', solveResults);
@@ -1389,37 +1428,7 @@ function calculateScore() {
   }, []);
   // const bestUpgrade = sortForUpgrade(bestFull, n).slice(0,2);
 
-  nextNames = `${heroesToLines(solveResults.core)}\n---\n${heroesToLines(solveResults.bench)}\n---\n\n---\n${lastLine}\n---\n${preferredAlliances.join('\n')}`;
-
-  // nextNames = bestFull.map(h => {
-  //   // if (h.name === bestUpgrade[0] || h.name === bestUpgrade[1] || h.star === 9) return h;
-  //   if (h.star === 9) return h;
-  //   h.star = Math.min(3, h.star);
-  //   return h;
-  // }).reduce((accum, hero,idx) => {
-  //   // const correctName = names.find(name => {
-  //   //   const h = findHero(name.split(',')[0]);
-  //   //   return h && h.name === heroName;
-  //   // });
-  //   // if (!correctName) throw new Error('no correct name found!');
-  //   return `${accum}${hero.name},${hero.star}\n`
-  // }, '') + `\n---\n\n---\n${lastLine}\n---\n${preferredAlliances.join('\n')}`;
-
-  // const bestPerk = perkCountRaw(best[0].heroes).filter(s => s[1] > 0).map(s => s[0]);
-  // const noPerkYet = best[0].heroes.filter(hero => {
-  //   return bestPerk.every(alliance => hero.alliances.indexOf(alliance) === -1);
-  // }).map(h => h.name);
-
-  // const mainNames = mainHeroes.map(h => h.name);
-  // const optNames = optHeroes.map(h => h.name);
-  // console.log('heroes', mainNames, optNames);
-  // best.slice(0,5).forEach(opt => {
-  //   // console.log(opt.heroes.map(h => h.name), opt.bench.map(h => h.name));
-  //   const perk = perkCountRaw(opt.heroes).filter(s => s[1] > 0);
-  //   // console.log(perk, opt.score.stars, opt.score.tiers);
-  // })
-
-  // console.log('f', bestFull);
+  nextNames = `${heroesToLines(solveResults.core)}\n---\n${heroesToLines(solveResults.bench)}\n---\n\n---\n${lastLine}\n---\n${GLOBAL_PREFERRED_ALLIANCES.join('\n')}`;
 
   // const shouldBuyStar = bestHeroes.filter(hero => hero.star < 3 && hero.tier < 4).length;
   // const supportShouldBuy = bestHeroes.filter(hero => hero.star >= 3 && hero.tier === 2).length;
@@ -1444,16 +1453,20 @@ function calculateScore() {
     probability: 100 * (1 - Math.pow(1 - shouldBuy,5)),
     soldFromField: solveResults.soldFromField.map(h => h.name),
     soldFromBench: solveResults.soldFromBench.map(h => h.name),
+    mustBeBought: solveResults.soldToField.map(h => h.name),
     mustBeBench: solveResults.fieldToBench.map(h => h.name),
     mustBeFielded: solveResults.benchToField.map(h => h.name),
-    mustBeBought: solveResults.soldToField.map(h => h.name),
     weapons: `${stylizeLine(offWeapons)}${stylizeLine(supWeapons)}${stylizeLine(defWeapons)}`,
 
-    boughtLater: solveResults.soldToBench.map(h => h.name),
-    bestDefHero: bestDefHero.map((s,id) => `${bestDefHero.length - id} - ${s}`),
+    // bestDefHero: bestDefHero.map((s,id) => `${bestDefHero.length - id} - ${s}`),
   };
 
   printToScreen(globalPrinted);
+  document.getElementById('textHeroes').innerHTML = toString({
+    boughtLater: solveResults.soldToBench.map(h => h.name),
+      full: bestDefHero.map((s,id) => `${bestDefHero.length - id} - ${s}`),
+  });
+//   autoApplyText();
 } 
 
 function stylizeLine(colls) {
@@ -1478,9 +1491,18 @@ let globalPrinted = '';
 function calculateScoreAuto() {
   printToScreen({ calculating: true, ...globalPrinted});
   clearTimeout(autoId);
+  clearTimeout(autoTextId);
   autoId = setTimeout(() => {
     calculateScore();
   }, 1000);
+}
+
+let autoTextId = '';
+function autoApplyText() {
+  clearTimeout(autoTextId);
+  autoTextId = setTimeout(() => {
+    applyText();
+  }, 5000);
 }
 
 function resetText() {
